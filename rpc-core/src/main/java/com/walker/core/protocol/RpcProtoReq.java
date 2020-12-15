@@ -12,5 +12,6 @@ import lombok.Data;
 public class RpcProtoReq {
     private String className;
     private String methodName;
+    private String methodType;
     private Object[] params;
 }
