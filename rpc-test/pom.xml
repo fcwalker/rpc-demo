@@ -12,10 +12,10 @@
         <artifactId>walker-rpc</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
-    <artifactId>rpc-demo</artifactId>
+    <artifactId>rpc-test</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>rpc-demo</name>
+    <name>rpc-test</name>
 
     <properties>
     </properties>
