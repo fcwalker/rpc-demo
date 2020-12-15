@@ -10,10 +10,10 @@
     <modules>
         <module>rpc-common</module>
         <module>rpc-core</module>
-        <module>rpc-demo</module>
+        <module>rpc-test</module>
     </modules>
     <packaging>pom</packaging>
-    <name>walker-rpc</name>
+    <name>rpc-demo</name>
 
     <description>
         手写rpc

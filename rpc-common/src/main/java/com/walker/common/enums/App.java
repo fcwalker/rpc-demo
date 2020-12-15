@@ -1,4 +1,4 @@
-package com.walker;
+package com.walker.common.enums;
 
 /**
  * Hello world!

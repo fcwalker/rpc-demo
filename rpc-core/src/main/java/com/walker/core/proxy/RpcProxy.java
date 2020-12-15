@@ -5,7 +5,9 @@ import com.walker.core.protocol.RpcProtoReq;
 import com.walker.core.protocol.RpcProtoResp;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.internal.http.HttpMethod;
 
+import java.lang.invoke.MethodType;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -17,10 +19,10 @@ import java.lang.reflect.Proxy;
 public class RpcProxy {
 
     static {
-        ParserConfig.getGlobalInstance().addAccept("io.kimmking");
+        ParserConfig.getGlobalInstance().addAccept("com.walker");
     }
 
-    public static <T> T create(final Class<T> serviceClass, final String url){
+    public static <T> T create(final Class<T> serviceClass, final String url, final ){
         return Proxy.newProxyInstance(RpcProxy.class.getClassLoader(), new Class[]{serviceClass}, )
     }
 
