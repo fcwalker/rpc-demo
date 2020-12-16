@@ -3,6 +3,7 @@ package com.walker.core.proxy.server;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.sun.deploy.util.ArrayUtil;
+import com.walker.core.cache.ServiceCache;
 import com.walker.core.protocol.RpcProtoReq;
 import com.walker.core.protocol.RpcProtoResp;
 import lombok.SneakyThrows;
@@ -26,7 +27,13 @@ public class RpcServerInvoker {
         String serviceClass = protoReq.getClassName();
         String methodName = protoReq.getMethodName();
         String[] paramTypes = protoReq.getParamTypes();
-        Object target = this.resolver.resolve(serviceClass);
+        Object target;
+        if (ServiceCache.SERVICE_MAP.containsKey(serviceClass)) {
+            target = ServiceCache.SERVICE_MAP.get(serviceClass);
+        } else {
+            target = this.resolver.resolve(serviceClass);
+            ServiceCache.SERVICE_MAP.put(serviceClass, target);
+        }
         Method targetMethod = resolveMethodFromClass(target.getClass(), methodName, paramTypes);
         try {
             Object[] params = protoReq.getParams();
