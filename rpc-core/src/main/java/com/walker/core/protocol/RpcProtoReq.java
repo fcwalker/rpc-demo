@@ -1,7 +1,9 @@
 package com.walker.core.protocol;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * @author dell
@@ -9,6 +11,8 @@ import lombok.Data;
  **/
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class RpcProtoReq {
     private String className;
     private String methodName;

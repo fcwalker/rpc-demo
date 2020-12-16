@@ -1,12 +1,14 @@
-package com.walker.core.proxy;
+package com.walker.core.proxy.client;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.parser.ParserConfig;
 import com.walker.core.enums.HttpMethodType;
 import com.walker.core.protocol.RpcProtoReq;
 import com.walker.core.protocol.RpcProtoResp;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
@@ -29,6 +31,7 @@ public class RpcClientProxy {
     }
 
     public static class RpcInvocationHandler implements InvocationHandler {
+        public static final MediaType JSONTYPE = MediaType.get("application/json; charset=utf-8");
 
         private final Class<?> serviceClass;
 
@@ -43,16 +46,16 @@ public class RpcClientProxy {
         }
 
         @Override
-        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        public Object invoke(final Object proxy, final Method method, final Object[] args) throws Throwable {
             // 传输数据格式（协议内容），供序列化使用
-            RpcProtoReq rpcProtoReq = RpcProtoReq.builder().className(this.serviceClass.getName())
+            RpcProtoReq rpcProtoReq = RpcProtoReq.builder()
+                    .className(this.serviceClass.getName())
                     .methodName(method.getName())
                     .methodType(methodType.getMethodType())
                     .params(args).build();
 
             // 发起远程调用，并获取结果
             RpcProtoResp protoResp = call(rpcProtoReq, url, methodType);
-
             // 异常情况处理
             if (!protoResp.isStatus()) {
                 Exception exception = protoResp.getException();
@@ -72,19 +75,28 @@ public class RpcClientProxy {
                 protoResp = callByOkHttp(protoReq, url, methodType);
             } catch (IOException e) {
                 e.printStackTrace();
+                protoResp.setStatus(false);
+                protoResp.setException(e);
             }
             return protoResp;
         }
 
-        private RpcProtoResp callByOkHttp(RpcProtoReq protoReq, String url, HttpMethodType methodType) throws IOException {
+        private RpcProtoResp callByOkHttp(final RpcProtoReq protoReq, final String url, final HttpMethodType methodType) throws IOException {
+            String req = JSON.toJSONString(protoReq);
+            System.out.println("req：" + req);
             OkHttpClient client = new OkHttpClient();
-            final Request request = new Request.Builder()
+            Request request = new Request.Builder()
                     .url(url)
                     .build();
             if (HttpMethodType.GET.equals(methodType)) {
-                request.newBuilder().get().build();
+                request = request.newBuilder().get().build();
+            } else {
+                request = request.newBuilder()
+                        .post(RequestBody.create(JSONTYPE, req))
+                        .build();
             }
             String respJson = client.newCall(request).execute().body().string();
+            System.out.println("resp：" + respJson);
             return JSON.parseObject(respJson, RpcProtoResp.class);
         }
 

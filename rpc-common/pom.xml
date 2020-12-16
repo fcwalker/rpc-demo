@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.walker.rpc</groupId>
-        <artifactId>walker-rpc</artifactId>
+        <artifactId>rpc-demo</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
     <artifactId>rpc-common</artifactId>
