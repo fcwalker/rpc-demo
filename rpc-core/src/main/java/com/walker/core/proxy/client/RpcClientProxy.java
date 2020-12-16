@@ -2,7 +2,6 @@ package com.walker.core.proxy.client;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.parser.ParserConfig;
-import com.walker.core.enums.HttpMethodType;
 import com.walker.core.protocol.RpcProtoReq;
 import com.walker.core.protocol.RpcProtoResp;
 import okhttp3.MediaType;
@@ -14,9 +13,11 @@ import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.Arrays;
 
 /**
  * 动态代理实现远程调用
+ *
  * @author dell
  * @date 2020/12/15 16:52
  **/
@@ -26,8 +27,8 @@ public class RpcClientProxy {
         ParserConfig.getGlobalInstance().addAccept("com.walker");
     }
 
-    public static <T> T create(final Class<T> serviceClass, final String url, final HttpMethodType methodType) {
-        return (T) Proxy.newProxyInstance(RpcClientProxy.class.getClassLoader(), new Class[]{serviceClass}, new RpcInvocationHandler(serviceClass, url, methodType));
+    public static <T> T create(final Class<T> serviceClass, final String url) {
+        return (T) Proxy.newProxyInstance(RpcClientProxy.class.getClassLoader(), new Class[]{serviceClass}, new RpcInvocationHandler(serviceClass, url));
     }
 
     public static class RpcInvocationHandler implements InvocationHandler {
@@ -37,12 +38,9 @@ public class RpcClientProxy {
 
         private final String url;
 
-        private final HttpMethodType methodType;
-
-        public <T> RpcInvocationHandler(Class<T> serviceClass, String url, HttpMethodType methodType) {
+        public <T> RpcInvocationHandler(Class<T> serviceClass, String url) {
             this.serviceClass = serviceClass;
             this.url = url;
-            this.methodType = methodType;
         }
 
         @Override
@@ -51,11 +49,17 @@ public class RpcClientProxy {
             RpcProtoReq rpcProtoReq = RpcProtoReq.builder()
                     .className(this.serviceClass.getName())
                     .methodName(method.getName())
-                    .methodType(methodType.getMethodType())
-                    .params(args).build();
-
+                    .build();
+            if (null != args) {
+                rpcProtoReq.setParams(args);
+                String[] paramTypes = new String[args.length];
+                for (int i = 0; i < args.length; i++) {
+                    paramTypes[i] = args[i].getClass().getName();
+                }
+                rpcProtoReq.setParamTypes(paramTypes);
+            }
             // 发起远程调用，并获取结果
-            RpcProtoResp protoResp = call(rpcProtoReq, url, methodType);
+            RpcProtoResp protoResp = call(rpcProtoReq, url);
             // 异常情况处理
             if (!protoResp.isStatus()) {
                 Exception exception = protoResp.getException();
@@ -67,12 +71,12 @@ public class RpcClientProxy {
         }
 
         // 远程调用
-        public RpcProtoResp call(final RpcProtoReq protoReq, final String url, HttpMethodType methodType) {
+        public RpcProtoResp call(final RpcProtoReq protoReq, final String url) {
             RpcProtoResp protoResp = null;
             // 远程访问
             // 通过http方式
             try {
-                protoResp = callByOkHttp(protoReq, url, methodType);
+                protoResp = callByOkHttp(protoReq, url);
             } catch (IOException e) {
                 e.printStackTrace();
                 protoResp.setStatus(false);
@@ -81,25 +85,18 @@ public class RpcClientProxy {
             return protoResp;
         }
 
-        private RpcProtoResp callByOkHttp(final RpcProtoReq protoReq, final String url, final HttpMethodType methodType) throws IOException {
+        private RpcProtoResp callByOkHttp(final RpcProtoReq protoReq, final String url) throws IOException {
             String req = JSON.toJSONString(protoReq);
             System.out.println("req：" + req);
             OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder()
                     .url(url)
+                    .post(RequestBody.create(JSONTYPE, req))
                     .build();
-            if (HttpMethodType.GET.equals(methodType)) {
-                request = request.newBuilder().get().build();
-            } else {
-                request = request.newBuilder()
-                        .post(RequestBody.create(JSONTYPE, req))
-                        .build();
-            }
             String respJson = client.newCall(request).execute().body().string();
             System.out.println("resp：" + respJson);
             return JSON.parseObject(respJson, RpcProtoResp.class);
         }
-
 
     }
 }

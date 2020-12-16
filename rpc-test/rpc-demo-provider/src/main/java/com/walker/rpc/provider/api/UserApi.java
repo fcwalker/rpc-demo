@@ -17,13 +17,8 @@ public class UserApi {
     @Autowired
     RpcServerInvoker invoker;
 
-    @GetMapping("/")
+    @PostMapping("/")
     public RpcProtoResp get(@RequestBody RpcProtoReq req) {
-        return invoker.invoke(req);
-    }
-
-    @PostMapping("/save")
-    public RpcProtoResp save(@RequestBody RpcProtoReq req) {
         return invoker.invoke(req);
     }
 

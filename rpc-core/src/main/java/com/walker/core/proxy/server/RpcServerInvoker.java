@@ -2,8 +2,10 @@ package com.walker.core.proxy.server;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.sun.deploy.util.ArrayUtil;
 import com.walker.core.protocol.RpcProtoReq;
 import com.walker.core.protocol.RpcProtoResp;
+import lombok.SneakyThrows;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -23,16 +25,20 @@ public class RpcServerInvoker {
         RpcProtoResp protoResp = new RpcProtoResp();
         String serviceClass = protoReq.getClassName();
         String methodName = protoReq.getMethodName();
-        Object[] params = protoReq.getParams();
+        String[] paramTypes = protoReq.getParamTypes();
         Object target = this.resolver.resolve(serviceClass);
-        System.out.println(target.getClass().getName());
-        Method targetMethod = resolveMethodFromClass(target.getClass(), methodName, params);
+        Method targetMethod = resolveMethodFromClass(target.getClass(), methodName, paramTypes);
         try {
+            Object[] params = protoReq.getParams();
+            // 参数类型转换
+            if (null != params && params.length > 0) {
+                convertParams(params, paramTypes);
+            }
             Object result = targetMethod.invoke(target, params);
             protoResp.setStatus(true);
             // 对返回对象进行序列化
             protoResp.setResult(JSON.toJSONString(result, SerializerFeature.WriteClassName));
-        } catch (IllegalAccessException | InvocationTargetException e) {
+        } catch (IllegalAccessException | InvocationTargetException | ClassNotFoundException e) {
             e.printStackTrace();
             protoResp.setStatus(false);
             protoResp.setException(e);
@@ -40,36 +46,52 @@ public class RpcServerInvoker {
         return protoResp;
     }
 
+    /**
+     * 根据参数类型格式化参数
+     *
+     * @param params
+     * @param paramTypes
+     */
+    private void convertParams(Object[] params, String[] paramTypes) throws ClassNotFoundException {
+        for (int i = 0; i < paramTypes.length; i++) {
+            String type = paramTypes[i];
+            Object param = params[i];
+            Class<?> cls;
+            cls = Class.forName(type);
+            params[i] = JSON.parseObject(JSON.toJSONString(param), cls);
+        }
+    }
+
     private Method resolveMethodFromClass(final Class<?> kclass, final String methodName,
-            final Object[] params) {
+                                          final String[] paramTypes) {
         return Arrays.stream(kclass.getMethods())
-                .filter(m -> compareMethod(m, methodName, params))
+                .filter(m -> compareMethod(m, methodName, paramTypes))
                 .findFirst().get();
     }
 
     boolean compareMethod(final Method sourceMethod, final String targetMethodName,
-            final Object[] params) {
+                          final String[] paramTypes) {
         if (!sourceMethod.getName().equals(targetMethodName)) {
             return false;
         }
-        if (null != params && params.length > 0) {
-            return compareMethodWithParams(sourceMethod, params);
+        if (null != paramTypes && paramTypes.length > 0) {
+            return compareMethodWithParams(sourceMethod, paramTypes);
         }
         return true;
     }
 
-    boolean compareMethodWithParams(final Method sourceMethod, final Object[] params) {
+    boolean compareMethodWithParams(final Method sourceMethod, final String[] paramTypes) {
         int paramsCount = sourceMethod.getParameterCount();
-        if (paramsCount != params.length) {
+        if (paramsCount != paramTypes.length) {
             return false;
         }
         return Arrays.asList(sourceMethod.getParameterTypes()).stream()
-                .allMatch(typeCls -> compareMethodParamType(typeCls, params));
+                .allMatch(typeCls -> compareMethodParamType(typeCls, paramTypes));
     }
 
-    boolean compareMethodParamType(final Class<?> typeCls, final Object[] params) {
-        return Arrays.asList(params).stream()
-                .anyMatch(param -> param.getClass().getName().equals(typeCls.getName()));
+    boolean compareMethodParamType(final Class<?> typeCls, final String[] paramTypes) {
+        return Arrays.asList(paramTypes).stream()
+                .anyMatch(type -> type.equals(typeCls.getName()));
     }
 
 
