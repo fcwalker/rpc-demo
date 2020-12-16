@@ -10,6 +10,7 @@
     <modules>
         <module>rpc-core</module>
         <module>rpc-test</module>
+        <module>rpc-core-aop</module>
     </modules>
     <packaging>pom</packaging>
     <name>${project.artifactId}</name>
